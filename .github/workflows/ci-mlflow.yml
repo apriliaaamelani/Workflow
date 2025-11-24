@@ -50,7 +50,8 @@ jobs:
       - name: Get MLflow run ID
         run: |
           RUN_ID=$(ls -t MLProject/mlruns/0 | head -n 1)
-          echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
+            echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
+
 
       # === 7. Upload artifact MLflow ke GitHub ===
       - name: Upload MLflow artifacts
@@ -63,7 +64,10 @@ jobs:
       - name: Build Docker Model
         run: |
           cd MLProject
-          mlflow models build-docker -m ./mlruns/0/$RUN_ID/artifacts/model -n diabetes-mlflow:latest
+          mlflow models build-docker \
+            -m MLProject/mlruns/0/$RUN_ID/artifacts/model \
+            -n diabetes-mlflow:latest
+
 
       # === 9. Login Docker Hub ===
       - name: Log in to Docker Hub

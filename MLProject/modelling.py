@@ -9,7 +9,6 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 
 
 def main():
-    # Tracking URI optional (MLflow local)
     mlflow.autolog()
 
     df = pd.read_csv("diabetes_preprocessing.csv")
@@ -21,7 +20,8 @@ def main():
         X, y, test_size=0.2, random_state=42
     )
 
-    with mlflow.start_run():
+    with mlflow.start_run() as run:
+
         model = LogisticRegression(max_iter=200)
         model.fit(X_train, y_train)
 
@@ -39,6 +39,8 @@ def main():
 
         mlflow.log_artifact("confusion_matrix.png")
 
+        # **WAJIB UNTUK DOCKER BUILD**
+        mlflow.sklearn.log_model(model, "model")
 
 if __name__ == "__main__":
     main()
