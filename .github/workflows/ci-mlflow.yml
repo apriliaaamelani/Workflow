@@ -2,7 +2,7 @@ name: CI MLflow Project
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
 jobs:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # === 1. Checkout ===
+      # === 1. Checkout repo ===
       - name: Checkout repo
         uses: actions/checkout@v3
 
@@ -20,13 +20,13 @@ jobs:
         with:
           python-version: "3.12.7"
 
-      # === 3. Check Env ===
+      # === 3. Check environment ===
       - name: Check Env
         run: |
           python --version
           pip --version
 
-      # === 4. Install MLflow deps ===
+      # === 4. Install dependencies ===
       - name: Install base dependencies
         run: |
           pip install mlflow==2.19.0 \
@@ -40,33 +40,34 @@ jobs:
             seaborn==0.13.2 \
             matplotlib==3.9.2
 
-      # === 5. Run MLflow Project ===
+      # === 5. Jalankan MLflow Project ===
       - name: Run MLflow project
         run: |
           cd MLProject
           mlflow run . --env-manager=local
 
-      # === 6. Debug MLflow output ===
+      # === 6. Debug MLflow outputs ===
       - name: List MLflow outputs
         run: |
           echo "=== List mlruns directory ==="
           ls -R MLProject/mlruns || echo "No mlruns directory!"
 
-      # === 7. Get latest run_id ===
+      # === 7. Ambil run_id terbaru ===
       - name: Get MLflow run ID
+        id: get_run_id
         run: |
-          run_id=$(mlflow runs list -l 1 --experiment-id 0 | awk 'NR==2 {print $1}')
-          echo "Latest run_id = $run_id"
-          echo "RUN_ID=$run_id" >> $GITHUB_ENV
+          RUN_ID=$(mlflow runs list -l 1 --experiment-id 0 | awk 'NR==2 {print $1}')
+          echo "Detected Run ID: $RUN_ID"
+          echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
 
-      # === 8. Upload artifacts ===
+      # === 8. Upload artifact MLflow ke GitHub ===
       - name: Upload MLflow artifacts
         uses: actions/upload-artifact@v4
         with:
           name: mlflow-artifacts
           path: MLProject/mlruns/
 
-      # === 9. Build Docker image ===
+      # === 9. Build Docker model ===
       - name: Build Docker Model
         run: |
           cd MLProject
@@ -82,13 +83,12 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # === 11. Tag image ===
+      # === 11. Tag Docker image ===
       - name: Tag Docker Image
         run: |
-          docker tag diabetes-mlflow:latest \
-            ${{ secrets.DOCKERHUB_USERNAME }}/diabetes-mlflow:latest
+          docker tag diabetes-mlflow:latest ${{ secrets.DOCKERHUB_USERNAME }}/diabetes-mlflow:latest
 
-      # === 12. Push image ===
+      # === 12. Push Docker image ===
       - name: Push Docker Image
         run: |
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/diabetes-mlflow:latest
