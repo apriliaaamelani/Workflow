@@ -2,7 +2,7 @@ name: CI MLflow Project
 
 on:
   push:
-    branches: ["main"]
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
@@ -40,7 +40,7 @@ jobs:
             seaborn==0.13.2 \
             matplotlib==3.9.2
 
-      # === 5. Run MLflow Project ===
+      # === 5. Run MLflow project ===
       - name: Run MLflow project
         run: |
           cd MLProject
@@ -52,43 +52,41 @@ jobs:
           echo "=== List mlruns directory ==="
           ls -R MLProject/mlruns || echo "No mlruns directory!"
 
-      # === 7. Get latest run_id ===
+      # === 7. Extract latest RUN ID ===
       - name: Get MLflow run ID
         run: |
-          run_id=$(mlflow runs list -l 1 --experiment-id 0 | awk 'NR==2 {print $1}')
-          echo "Detected run_id: $run_id"
+          run_id=$(mlflow runs list --experiment-id 0 -l 1 | awk 'NR==2 {print $1}')
+          echo "Latest run_id: $run_id"
           echo "RUN_ID=$run_id" >> $GITHUB_ENV
 
-      # === 8. Upload mlruns artifact to GitHub ===
+      # === 8. Upload artifacts to GitHub ===
       - name: Upload MLflow artifacts
         uses: actions/upload-artifact@v4
         with:
           name: mlflow-artifacts
           path: MLProject/mlruns/
 
-      # === 9. Build Docker model ===
+      # === 9. Build Docker image ===
       - name: Build Docker Model
         run: |
           cd MLProject
           mlflow models build-docker \
-            -m mlruns/0/${RUN_ID}/artifacts/model \
+            -m "mlruns/0/${RUN_ID}/artifacts/model" \
             -n diabetes-mlflow:latest
 
-      # === 10. Login Docker Hub ===
+      # === 10. Docker Hub Login ===
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # === 11. Tag Docker image ===
+      # === 11. Tag image ===
       - name: Tag Docker Image
         run: |
-          docker tag diabetes-mlflow:latest \
-            ${{ secrets.DOCKERHUB_USERNAME }}/diabetes-mlflow:latest
+          docker tag diabetes-mlflow:latest ${{ secrets.DOCKERHUB_USERNAME }}/diabetes-mlflow:latest
 
-      # === 12. Push Docker image ===
+      # === 12. Push to Docker Hub ===
       - name: Push Docker Image
         run: |
-          docker push \
-            ${{ secrets.DOCKERHUB_USERNAME }}/diabetes-mlflow:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/diabetes-mlflow:latest
