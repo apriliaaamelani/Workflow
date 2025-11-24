@@ -10,78 +10,59 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # === 1. Checkout repo ===
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      # === 2. Python ===
       - name: Set up Python 3.12.7
         uses: actions/setup-python@v4
         with:
           python-version: "3.12.7"
 
-      # === 3. Check environment ===
       - name: Check Env
         run: |
           python --version
           pip --version
 
-      # === 4. Install dependencies (karena env-manager=local) ===
       - name: Install base dependencies
         run: |
-          pip install mlflow==2.19.0 \
-            cloudpickle==3.1.2 \
-            numpy==2.3.5 \
-            pandas==2.3.3 \
-            psutil==7.0.0 \
-            pyarrow==18.1.0 \
-            scikit-learn==1.7.2 \
-            scipy==1.16.3 \
-            seaborn==0.13.2 \
-            matplotlib==3.9.2
+          pip install mlflow==2.19.0
 
-      # === 5. Jalankan MLflow Project ===
       - name: Run MLflow project
         run: |
           cd MLProject
           mlflow run . --env-manager=local
 
-      # === 6. Ambil run_id terbaru ===
+      # === FIXED RUN ID ===
       - name: Get MLflow run ID
         run: |
-          RUN_ID=$(ls -t MLProject/mlruns/0 | head -n 1)
-            echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
+          cd MLProject
+          RUN_ID=$(ls -td mlruns/0/*/ | head -n 1 | xargs basename)
+          echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
 
-
-      # === 7. Upload artifact MLflow ke GitHub ===
       - name: Upload MLflow artifacts
         uses: actions/upload-artifact@v4
         with:
           name: mlflow-artifacts
           path: MLProject/mlruns/
 
-      # === 8. Build Docker model ===
+      # === FIXED PATH ===
       - name: Build Docker Model
         run: |
           cd MLProject
           mlflow models build-docker \
-            -m MLProject/mlruns/0/$RUN_ID/artifacts/model \
+            -m mlruns/0/$RUN_ID/artifacts/model \
             -n diabetes-mlflow:latest
 
-
-      # === 9. Login Docker Hub ===
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # === 10. Tag Docker image ===
       - name: Tag Docker Image
         run: |
           docker tag diabetes-mlflow:latest ${{ secrets.DOCKERHUB_USERNAME }}/diabetes-mlflow:latest
 
-      # === 11. Push Docker ===
       - name: Push Docker Image
         run: |
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/diabetes-mlflow:latest
