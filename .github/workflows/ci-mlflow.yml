@@ -42,11 +42,12 @@ jobs:
           echo "=== Listing mlruns... ==="
           ls -R MLProject/mlruns
 
+      # === FIX! Ambil folder run yang mengandung artifacts ===
       - name: Get MLflow run ID
         id: get_run_id
         run: |
           cd MLProject/mlruns/0
-          RUN_ID=$(ls -t | head -n 1)
+          RUN_ID=$(ls -td */ | grep -v datasets | head -n 1 | tr -d '/')
           echo "Detected RUN_ID=$RUN_ID"
           echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
 
