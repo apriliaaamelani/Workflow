@@ -66,12 +66,12 @@ jobs:
 
       # === 8. Build Docker Model ===
       - name: Build Docker Model
-        run: |
-          cd MLProject
-          echo "Using RUN_ID=$RUN_ID"
-          mlflow models build-docker \
-            -m mlruns/0/$RUN_ID/artifacts/model \
-            -n diabetes-mlflow:latest
+        run: mlflow models build-docker \
+            -m "mlruns/0/${RUN_ID}/artifacts/model" \
+            -n mlflow-model
+        env:
+            RUN_ID: 7ba250bbba73426ba29c2d06df9788f2
+
 
       # === 9. Login Docker Hub ===
       - name: Log in to Docker Hub
