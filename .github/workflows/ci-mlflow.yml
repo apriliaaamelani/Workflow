@@ -1,0 +1,75 @@
+name: CI MLflow Project
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  mlflow-ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      # === Set up job ===
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      # === Set up Python ===
+      - name: Set up Python 3.12.7
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12.7"
+
+      # === Check Environment ===
+      - name: Check Env
+        run: |
+          python --version
+          pip --version
+
+      # === Install dependencies (MLflow Project support) ===
+      - name: Install base dependencies
+        run: |
+          pip install mlflow==2.19.0
+
+      # === Run MLflow Project ===
+      - name: Run MLflow project
+        run: |
+          cd MLProject
+          mlflow run . --env-manager=local
+        id: mlflowRun
+
+      # === Get latest run_id ===
+      - name: Get MLflow run ID
+        run: |
+          RUN_ID=$(ls -t mlruns/0 | head -n 1)
+          echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
+
+      # === Upload artifacts to GitHub ===
+      - name: Upload MLflow artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: mlflow-artifacts
+          path: MLProject/mlruns/
+
+      # === Build Docker model ===
+      - name: Build Docker Model
+        run: |
+          cd MLProject
+          mlflow models build-docker -m ./mlruns/0/$RUN_ID/artifacts/model -n diabetes-mlflow:latest
+
+      # === Log in to Docker Hub ===
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # === Tag image ===
+      - name: Tag Docker Image
+        run: |
+          docker tag diabetes-mlflow:latest ${{ secrets.DOCKERHUB_USERNAME }}/diabetes-mlflow:latest
+
+      # === Push image ===
+      - name: Push Docker Image
+        run: |
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/diabetes-mlflow:latest
