@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # === 1. Checkout repo ===
+      # === 1. Checkout ===
       - name: Checkout repo
         uses: actions/checkout@v3
 
@@ -20,13 +20,13 @@ jobs:
         with:
           python-version: "3.12.7"
 
-      # === 3. Check environment ===
+      # === 3. Check Env ===
       - name: Check Env
         run: |
           python --version
           pip --version
 
-      # === 4. Install dependencies ===
+      # === 4. Install MLflow deps ===
       - name: Install base dependencies
         run: |
           pip install mlflow==2.19.0 \
@@ -40,26 +40,26 @@ jobs:
             seaborn==0.13.2 \
             matplotlib==3.9.2
 
-      # === 5. Run MLflow project ===
+      # === 5. Run MLflow Project ===
       - name: Run MLflow project
         run: |
           cd MLProject
           mlflow run . --env-manager=local
 
-      # === 6. List MLflow outputs ===
+      # === 6. Debug MLflow output ===
       - name: List MLflow outputs
         run: |
           echo "=== List mlruns directory ==="
           ls -R MLProject/mlruns || echo "No mlruns directory!"
 
-      # === 7. Extract latest RUN ID ===
+      # === 7. Get latest run_id ===
       - name: Get MLflow run ID
         run: |
-          run_id=$(mlflow runs list --experiment-id 0 -l 1 | awk 'NR==2 {print $1}')
-          echo "Latest run_id: $run_id"
+          run_id=$(mlflow runs list -l 1 --experiment-id 0 | awk 'NR==2 {print $1}')
+          echo "Latest run_id = $run_id"
           echo "RUN_ID=$run_id" >> $GITHUB_ENV
 
-      # === 8. Upload artifacts to GitHub ===
+      # === 8. Upload artifacts ===
       - name: Upload MLflow artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -70,11 +70,12 @@ jobs:
       - name: Build Docker Model
         run: |
           cd MLProject
+          echo "Using RUN_ID=$RUN_ID"
           mlflow models build-docker \
-            -m "mlruns/0/${RUN_ID}/artifacts/model" \
+            -m mlruns/0/$RUN_ID/artifacts/model \
             -n diabetes-mlflow:latest
 
-      # === 10. Docker Hub Login ===
+      # === 10. Login Docker Hub ===
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
@@ -84,9 +85,10 @@ jobs:
       # === 11. Tag image ===
       - name: Tag Docker Image
         run: |
-          docker tag diabetes-mlflow:latest ${{ secrets.DOCKERHUB_USERNAME }}/diabetes-mlflow:latest
+          docker tag diabetes-mlflow:latest \
+            ${{ secrets.DOCKERHUB_USERNAME }}/diabetes-mlflow:latest
 
-      # === 12. Push to Docker Hub ===
+      # === 12. Push image ===
       - name: Push Docker Image
         run: |
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/diabetes-mlflow:latest
